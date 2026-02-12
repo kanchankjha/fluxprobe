@@ -1,0 +1,10 @@
+fluxprobe (0.1.0-1) unstable; urgency=medium
+
+  * Initial release.
+  * Schema-driven protocol fuzzing with YAML/JSON support
+  * Built-in profiles: echo, http, dns, mqtt, modbus, coap, tcp, udp, ip, snmp, ssh
+  * TCP and UDP transport support
+  * Multiple mutation strategies (bit flip, length corruption, invalid enum)
+  * Full test coverage (96%+)
+
+ -- Kanchan Kumar Jha <kanchankjha@gmail.com>  Wed, 12 Feb 2026 17:00:00 +0000

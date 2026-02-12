@@ -1,0 +1,32 @@
+Source: fluxprobe
+Section: devel
+Priority: optional
+Maintainer: Kanchan Kumar Jha <kanchankjha@gmail.com>
+Build-Depends: debhelper-compat (= 13),
+               dh-python,
+               python3-all,
+               python3-setuptools,
+               python3-yaml
+Standards-Version: 4.6.2
+Homepage: https://github.com/kanchankjha/fluxprobe
+Vcs-Browser: https://github.com/kanchankjha/fluxprobe
+Vcs-Git: https://github.com/kanchankjha/fluxprobe.git
+Rules-Requires-Root: no
+
+Package: fluxprobe
+Architecture: all
+Depends: ${python3:Depends},
+         ${misc:Depends},
+         python3-yaml
+Description: Schema-driven protocol fuzzer
+ FluxProbe is a lightweight, schema-driven protocol fuzzer that generates
+ a mix of valid and intentionally corrupted frames for testing network
+ protocols against devices under test.
+ .
+ Features include:
+  * Declarative protocol schemas (YAML/JSON)
+  * Structure-aware and byte-level mutation strategies
+  * Multiple built-in protocol profiles (HTTP, DNS, MQTT, Modbus, etc.)
+  * Pluggable TCP/UDP transports
+  * Deterministic runs with seed support
+  * Detailed logging with hexdump output

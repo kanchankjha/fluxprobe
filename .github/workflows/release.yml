@@ -1,0 +1,231 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [main, master]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12']
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .
+        pip install pytest pytest-cov pytest-mock
+
+    - name: Run tests
+      run: pytest tests/ -v --cov=fluxprobe --cov-report=xml
+
+    - name: Upload coverage
+      uses: codecov/codecov-action@v4
+      if: matrix.python-version == '3.12'
+      with:
+        files: coverage.xml
+        fail_ci_if_error: false
+
+  build-deb:
+    runs-on: ubuntu-latest
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y devscripts debhelper dh-python python3-all python3-setuptools python3-yaml dpkg-dev
+
+    - name: Build Debian package
+      run: |
+        dpkg-buildpackage -us -uc -b
+        mkdir -p dist
+        cp ../fluxprobe_*.deb dist/
+        cp ../fluxprobe_*.changes dist/ || true
+
+    - name: Upload Debian package artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: debian-package
+        path: dist/*.deb
+
+  build-python:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install build tools
+      run: pip install build twine
+
+    - name: Build Python package
+      run: python -m build
+
+    - name: Upload Python package artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: python-package
+        path: dist/*
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [build-deb, build-python]
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          artifacts/debian-package/*.deb
+          artifacts/python-package/*
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  update-apt-repo:
+    runs-on: ubuntu-latest
+    needs: build-deb
+    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: apt-repo
+        fetch-depth: 0
+      continue-on-error: true
+
+    - name: Initialize apt-repo branch if needed
+      run: |
+        if [ ! -d "pool" ]; then
+          git checkout --orphan apt-repo || true
+          git rm -rf . 2>/dev/null || true
+          mkdir -p pool/main dists/stable/main/binary-amd64 dists/stable/main/binary-all
+        fi
+
+    - name: Download Debian package
+      uses: actions/download-artifact@v4
+      with:
+        name: debian-package
+        path: pool/main
+
+    - name: Install apt repository tools
+      run: sudo apt-get update && sudo apt-get install -y dpkg-dev apt-utils
+
+    - name: Generate Packages files
+      run: |
+        cd pool/main
+        dpkg-scanpackages -m . > ../../dists/stable/main/binary-all/Packages
+        gzip -k -f ../../dists/stable/main/binary-all/Packages
+        cd ../..
+
+    - name: Generate Release file
+      run: |
+        cd dists/stable
+        cat > Release << EOF
+        Origin: FluxProbe
+        Label: FluxProbe APT Repository
+        Suite: stable
+        Codename: stable
+        Architectures: all amd64
+        Components: main
+        Description: FluxProbe - Schema-driven protocol fuzzer
+        EOF
+        apt-ftparchive release . >> Release
+        cd ../..
+
+    - name: Create repository README
+      run: |
+        cat > README.md << 'EOF'
+        # FluxProbe APT Repository
+
+        This branch contains the APT repository for installing FluxProbe via apt-get.
+
+        ## Quick Installation
+
+        ```bash
+        # Add the repository
+        curl -fsSL https://raw.githubusercontent.com/kanchankjha/fluxprobe/apt-repo/install.sh | sudo bash
+
+        # Or manually:
+        echo "deb [trusted=yes] https://kanchankjha.github.io/fluxprobe stable main" | sudo tee /etc/apt/sources.list.d/fluxprobe.list
+        sudo apt-get update
+        sudo apt-get install fluxprobe
+        ```
+
+        ## Manual Setup
+
+        1. Add the repository to your sources:
+        ```bash
+        sudo tee /etc/apt/sources.list.d/fluxprobe.list << 'EOL'
+        deb [trusted=yes] https://kanchankjha.github.io/fluxprobe stable main
+        EOL
+        ```
+
+        2. Update and install:
+        ```bash
+        sudo apt-get update
+        sudo apt-get install fluxprobe
+        ```
+        EOF
+
+    - name: Create installation script
+      run: |
+        cat > install.sh << 'EOF'
+        #!/bin/bash
+        set -e
+
+        echo "Setting up FluxProbe APT repository..."
+
+        # Add repository
+        echo "deb [trusted=yes] https://kanchankjha.github.io/fluxprobe stable main" | sudo tee /etc/apt/sources.list.d/fluxprobe.list
+
+        # Update package lists
+        sudo apt-get update
+
+        # Install fluxprobe
+        sudo apt-get install -y fluxprobe
+
+        echo "FluxProbe installed successfully!"
+        echo "Run 'fluxprobe --help' to get started."
+        EOF
+        chmod +x install.sh
+
+    - name: Commit and push
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        git add -A
+        git commit -m "Update APT repository" || true
+        git push origin apt-repo || git push --set-upstream origin apt-repo

@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=67", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fluxprobe"
+version = "0.1.0"
+description = "Schema-driven protocol fuzzer"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "Kanchan Kumar Jha", email = "kanchankjha@gmail.com" }]
+dependencies = ["PyYAML>=6.0"]
+license = { text = "MIT" }
+keywords = ["fuzzing", "protocol", "testing", "security", "network"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Software Development :: Testing",
+]
+
+[project.urls]
+Homepage = "https://github.com/kanchankjha/fluxprobe"
+Repository = "https://github.com/kanchankjha/fluxprobe.git"
+Issues = "https://github.com/kanchankjha/fluxprobe/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "pytest-mock>=3.10",
+]
+
+[project.scripts]
+fluxprobe = "fluxprobe.cli:main"
