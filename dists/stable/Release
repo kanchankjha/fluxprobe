@@ -1,0 +1,24 @@
+Origin: FluxProbe
+Label: FluxProbe APT Repository
+Suite: stable
+Codename: stable
+Architectures: all amd64
+Components: main
+Description: FluxProbe - Schema-driven protocol fuzzer
+Date: Thu, 12 Feb 2026 11:47:47 +0000
+MD5Sum:
+ 9ecb52ca63e7d8afcbe54772c0715ead              216 Release
+ 5ad1cf4a2dd4cc73badee514b62d5e08              995 main/binary-all/Packages
+ de8d5dbcb94f4eaf4f600e70d2ba2672              671 main/binary-all/Packages.gz
+SHA1:
+ f5e2dda463e2a0ef3b40dae5f23f4b6235e2e2fb              216 Release
+ 81ac3ccbca43fa10754d7021de40cb2a868d5a42              995 main/binary-all/Packages
+ 00f1813fd03726b3eec32a55c3eeaa29305fca14              671 main/binary-all/Packages.gz
+SHA256:
+ c67589082cb3c3f9def4d0d77d53d9a2b9581f4021a0e419e12a172c6aff9e0d              216 Release
+ 9af66ab784b549dace048e6c46993d1bd423c574ff37ba13b5c3a4422dad0952              995 main/binary-all/Packages
+ 282840a0b5558f03b6ba18e79a43b7761498001e716d7beb7ea076f6b98ceff2              671 main/binary-all/Packages.gz
+SHA512:
+ 19f20155c32c99061b97a67fc1fd4a162bfdca582bcaf2398ecc519a4f9a16571e39c48ed2c7bb7607e2820f4f843a315475f3c43e34df3b8770d25ef10b8b70              216 Release
+ e64431f1ec7ab3729fc74dbc44080ebcb012e3fead9e4d55d1a9c401268ece59d13020de880b340d42656ab5a8a6304a44bcc8e6eeb406afc1bdae265b603502              995 main/binary-all/Packages
+ 7fa7e3aa186c1db5a5b205c8fbf363759f5e5409d02fd09824697a46d36700b421d055dfff2e49cf82c674a96477ae8ae946efeb26684adcdd1089e988b87a8f              671 main/binary-all/Packages.gz
