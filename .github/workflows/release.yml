@@ -50,14 +50,24 @@ jobs:
     - name: Install build dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y devscripts debhelper dh-python python3-all python3-setuptools python3-yaml dpkg-dev
+        sudo apt-get install -y build-essential devscripts debhelper dh-python python3-all python3-setuptools python3-yaml dpkg-dev fakeroot
 
     - name: Build Debian package
       run: |
         dpkg-buildpackage -us -uc -b
         mkdir -p dist
         cp ../fluxprobe_*.deb dist/
-        cp ../fluxprobe_*.changes dist/ || true
+        cp ../fluxprobe_*.changes dist/ 2>/dev/null || true
+        cp ../fluxprobe_*.buildinfo dist/ 2>/dev/null || true
+
+    - name: Verify package built
+      run: |
+        if [ ! -f dist/fluxprobe_*.deb ]; then
+          echo "ERROR: Debian package not found!"
+          exit 1
+        fi
+        echo "Package built successfully:"
+        ls -la dist/
 
     - name: Upload Debian package artifact
       uses: actions/upload-artifact@v4
@@ -120,16 +130,20 @@ jobs:
       contents: write
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout main branch first
+      uses: actions/checkout@v4
       with:
-        ref: apt-repo
         fetch-depth: 0
-      continue-on-error: true
 
-    - name: Initialize apt-repo branch if needed
+    - name: Setup apt-repo branch
       run: |
-        if [ ! -d "pool" ]; then
-          git checkout --orphan apt-repo || true
+        # Check if apt-repo branch exists remotely
+        if git ls-remote --exit-code --heads origin apt-repo >/dev/null 2>&1; then
+          echo "apt-repo branch exists, checking out..."
+          git checkout apt-repo
+        else
+          echo "Creating new apt-repo branch..."
+          git checkout --orphan apt-repo
           git rm -rf . 2>/dev/null || true
           mkdir -p pool/main dists/stable/main/binary-amd64 dists/stable/main/binary-all
         fi
@@ -140,11 +154,22 @@ jobs:
         name: debian-package
         path: pool/main
 
+    - name: Verify downloaded package
+      run: |
+        if [ ! -f pool/main/*.deb ]; then
+          echo "ERROR: No .deb files found in pool/main/"
+          ls -la pool/main/ || true
+          exit 1
+        fi
+        echo "Found packages:"
+        ls -la pool/main/
+
     - name: Install apt repository tools
       run: sudo apt-get update && sudo apt-get install -y dpkg-dev apt-utils
 
     - name: Generate Packages files
       run: |
+        mkdir -p dists/stable/main/binary-all dists/stable/main/binary-amd64
         cd pool/main
         dpkg-scanpackages -m . > ../../dists/stable/main/binary-all/Packages
         gzip -k -f ../../dists/stable/main/binary-all/Packages
@@ -153,73 +178,46 @@ jobs:
     - name: Generate Release file
       run: |
         cd dists/stable
-        cat > Release << EOF
-        Origin: FluxProbe
-        Label: FluxProbe APT Repository
-        Suite: stable
-        Codename: stable
-        Architectures: all amd64
-        Components: main
-        Description: FluxProbe - Schema-driven protocol fuzzer
-        EOF
+        echo "Origin: FluxProbe" > Release
+        echo "Label: FluxProbe APT Repository" >> Release
+        echo "Suite: stable" >> Release
+        echo "Codename: stable" >> Release
+        echo "Architectures: all amd64" >> Release
+        echo "Components: main" >> Release
+        echo "Description: FluxProbe - Schema-driven protocol fuzzer" >> Release
         apt-ftparchive release . >> Release
         cd ../..
 
     - name: Create repository README
       run: |
-        cat > README.md << 'EOF'
+        cat > README.md << 'READMEEOF'
         # FluxProbe APT Repository
 
         This branch contains the APT repository for installing FluxProbe via apt-get.
 
         ## Quick Installation
 
-        ```bash
-        # Add the repository
         curl -fsSL https://raw.githubusercontent.com/kanchankjha/fluxprobe/apt-repo/install.sh | sudo bash
-
-        # Or manually:
-        echo "deb [trusted=yes] https://kanchankjha.github.io/fluxprobe stable main" | sudo tee /etc/apt/sources.list.d/fluxprobe.list
-        sudo apt-get update
-        sudo apt-get install fluxprobe
-        ```
 
         ## Manual Setup
 
-        1. Add the repository to your sources:
-        ```bash
-        sudo tee /etc/apt/sources.list.d/fluxprobe.list << 'EOL'
-        deb [trusted=yes] https://kanchankjha.github.io/fluxprobe stable main
-        EOL
-        ```
-
-        2. Update and install:
-        ```bash
+        echo "deb [trusted=yes] https://kanchankjha.github.io/fluxprobe stable main" | sudo tee /etc/apt/sources.list.d/fluxprobe.list
         sudo apt-get update
         sudo apt-get install fluxprobe
-        ```
-        EOF
+        READMEEOF
 
     - name: Create installation script
       run: |
-        cat > install.sh << 'EOF'
+        cat > install.sh << 'INSTALLEOF'
         #!/bin/bash
         set -e
-
         echo "Setting up FluxProbe APT repository..."
-
-        # Add repository
         echo "deb [trusted=yes] https://kanchankjha.github.io/fluxprobe stable main" | sudo tee /etc/apt/sources.list.d/fluxprobe.list
-
-        # Update package lists
         sudo apt-get update
-
-        # Install fluxprobe
         sudo apt-get install -y fluxprobe
-
         echo "FluxProbe installed successfully!"
         echo "Run 'fluxprobe --help' to get started."
-        EOF
+        INSTALLEOF
         chmod +x install.sh
 
     - name: Commit and push
@@ -227,5 +225,6 @@ jobs:
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
         git add -A
-        git commit -m "Update APT repository" || true
-        git push origin apt-repo || git push --set-upstream origin apt-repo
+        git diff --staged --quiet && echo "No changes to commit" && exit 0
+        git commit -m "Update APT repository"
+        git push origin apt-repo 2>/dev/null || git push --set-upstream origin apt-repo

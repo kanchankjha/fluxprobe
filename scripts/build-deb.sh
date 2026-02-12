@@ -8,7 +8,7 @@ echo "Building FluxProbe Debian package..."
 if ! command -v dpkg-buildpackage &> /dev/null; then
     echo "Installing build dependencies..."
     sudo apt-get update
-    sudo apt-get install -y devscripts debhelper dh-python python3-all python3-setuptools python3-yaml
+    sudo apt-get install -y build-essential devscripts debhelper dh-python python3-all python3-setuptools python3-yaml dpkg-dev fakeroot
 fi
 
 # Build package
