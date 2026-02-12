@@ -5,10 +5,10 @@ Maintainer: Kanchan Kumar Jha <kanchankjha@gmail.com>
 Installed-Size: 75
 Depends: python3-yaml, python3:any
 Filename: ./fluxprobe_0.1.0-1_all.deb
-Size: 16332
-MD5sum: de46c56601f93301b04c16fef4af21cc
-SHA1: 23f093ed697701c23127715e6757f7f943e7b0eb
-SHA256: 94336f86e7b8ca0b8e745bd01e5ed01fd486006e0a3d7112bf7680775ae64814
+Size: 16336
+MD5sum: c8ebfe5ae1ff8f220b1f250d37eaa004
+SHA1: a73562aa722015218cac89fa513d6eb04f0d638f
+SHA256: debe4c37e967782b67abd596eda52c746a7a0f52de0bead5f6d76dfb9a49fa11
 Section: devel
 Priority: optional
 Homepage: https://github.com/kanchankjha/fluxprobe
