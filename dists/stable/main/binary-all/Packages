@@ -25,3 +25,30 @@ Description: Schema-driven protocol fuzzer
   * Deterministic runs with seed support
   * Detailed logging with hexdump output
 
+Package: fluxprobe
+Version: 1.0.0-1
+Architecture: all
+Maintainer: Kanchan Kumar Jha <kanchankjha@gmail.com>
+Installed-Size: 75
+Depends: python3-yaml, python3:any
+Filename: ./fluxprobe_1.0.0-1_all.deb
+Size: 16316
+MD5sum: 0769cc39ea81041b593c35cf0b7a9ceb
+SHA1: c4a95ec710831c184bc673a7082ee01e5077e113
+SHA256: 5e21c46471377d2c2478d64fdaad98e47b3819fdcd89731b8d17b94d14a908a1
+Section: devel
+Priority: optional
+Homepage: https://github.com/kanchankjha/fluxprobe
+Description: Schema-driven protocol fuzzer
+ FluxProbe is a lightweight, schema-driven protocol fuzzer that generates
+ a mix of valid and intentionally corrupted frames for testing network
+ protocols against devices under test.
+ .
+ Features include:
+  * Declarative protocol schemas (YAML/JSON)
+  * Structure-aware and byte-level mutation strategies
+  * Multiple built-in protocol profiles (HTTP, DNS, MQTT, Modbus, etc.)
+  * Pluggable TCP/UDP transports
+  * Deterministic runs with seed support
+  * Detailed logging with hexdump output
+
