@@ -32,10 +32,10 @@ Features include:
 %autosetup -n %{name}-%{version}
 
 %build
-%py3_build
+python3 setup.py build
 
 %install
-%py3_install
+python3 setup.py install --root=%{buildroot} --optimize=1
 
 %files
 %license LICENSE
