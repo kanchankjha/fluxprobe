@@ -31,8 +31,12 @@ Features include:
 # Nothing to build
 
 %install
-# Install using pip to a target directory, then reorganize
+# Install using pip to a target directory
 pip3 install --no-deps --target=%{buildroot}/usr/lib/python3/dist-packages .
+# Remove the bin directory created by pip (we create our own wrapper)
+rm -rf %{buildroot}/usr/lib/python3/dist-packages/bin
+# Remove __pycache__ to avoid issues
+find %{buildroot} -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 # Create bin directory and wrapper script
 mkdir -p %{buildroot}/usr/bin
 cat > %{buildroot}/usr/bin/fluxprobe << 'EOF'
@@ -42,12 +46,16 @@ if __name__ == "__main__":
     main()
 EOF
 chmod +x %{buildroot}/usr/bin/fluxprobe
+# Debug: List installed files
+echo "=== Installed files ==="
+find %{buildroot} -type f | sort
 
 %files
 %license LICENSE
 %doc README.md
-/usr/lib/python3/dist-packages/%{name}/
-/usr/lib/python3/dist-packages/%{name}-*.dist-info/
+%dir /usr/lib/python3/dist-packages/%{name}/
+/usr/lib/python3/dist-packages/%{name}/*
+/usr/lib/python3/dist-packages/%{name}-*.dist-info
 /usr/bin/fluxprobe
 
 %changelog
