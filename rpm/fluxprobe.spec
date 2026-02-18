@@ -16,6 +16,8 @@ BuildRequires:  python3-wheel
 Requires:       python3
 Requires:       python3-pyyaml >= 6.0
 
+%define python3_sitelib %(python3 -c "import sysconfig; print(sysconfig.get_paths()['purelib'])")
+
 %description
 FluxProbe is a lightweight, schema-driven protocol fuzzer that generates
 a mix of valid and intentionally corrupted frames for testing network
@@ -35,14 +37,14 @@ Features include:
 python3 setup.py build
 
 %install
-python3 setup.py install --root=%{buildroot} --optimize=1
+python3 setup.py install --root=%{buildroot} --prefix=/usr --optimize=1
 
 %files
 %license LICENSE
 %doc README.md
 %{python3_sitelib}/%{name}/
-%{python3_sitelib}/%{name}-%{version}*
-%{_bindir}/fluxprobe
+%{python3_sitelib}/%{name}-*.egg-info/
+/usr/bin/fluxprobe
 
 %changelog
 * Thu Feb 12 2026 Kanchan Kumar Jha <kanchankjha@gmail.com> - 0.1.0-1
