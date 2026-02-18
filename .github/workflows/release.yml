@@ -2,11 +2,8 @@ name: Build and Release
 
 on:
   push:
-    branches: [main, master]
     tags:
       - 'v*'
-  pull_request:
-    branches: [main, master]
 
 jobs:
   test:
@@ -42,7 +39,6 @@ jobs:
   build-deb:
     runs-on: ubuntu-latest
     needs: test
-    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
 
     steps:
     - uses: actions/checkout@v4
@@ -75,6 +71,60 @@ jobs:
         name: debian-package
         path: dist/*.deb
 
+  build-rpm:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install RPM build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y rpm rpmlint python3-dev python3-setuptools python3-pip
+
+    - name: Setup RPM build environment
+      run: |
+        mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+        echo '%_topdir %(echo $HOME)/rpmbuild' > ~/.rpmmacros
+
+    - name: Extract version from tag
+      id: version
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Create source tarball
+      run: |
+        VERSION=${{ steps.version.outputs.version }}
+        TARBALL_DIR="fluxprobe-$VERSION"
+        mkdir -p "$TARBALL_DIR"
+        cp -r fluxprobe examples LICENSE README.md pyproject.toml requirements.txt "$TARBALL_DIR/"
+        tar czf ~/rpmbuild/SOURCES/fluxprobe-$VERSION.tar.gz "$TARBALL_DIR"
+        rm -rf "$TARBALL_DIR"
+
+    - name: Update and copy spec file
+      run: |
+        VERSION=${{ steps.version.outputs.version }}
+        sed "s/^Version:.*/Version:        $VERSION/" rpm/fluxprobe.spec > ~/rpmbuild/SPECS/fluxprobe.spec
+
+    - name: Build RPM package
+      run: |
+        rpmbuild -bb ~/rpmbuild/SPECS/fluxprobe.spec
+
+    - name: Collect RPM packages
+      run: |
+        mkdir -p dist
+        cp ~/rpmbuild/RPMS/noarch/fluxprobe-*.rpm dist/ 2>/dev/null || true
+        echo "Package built successfully:"
+        ls -la dist/
+
+    - name: Upload RPM package artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: rpm-package
+        path: dist/*.rpm
+
   build-python:
     runs-on: ubuntu-latest
     needs: test
@@ -99,10 +149,27 @@ jobs:
         name: python-package
         path: dist/*
 
+  publish-pypi:
+    runs-on: ubuntu-latest
+    needs: build-python
+    permissions:
+      id-token: write
+
+    steps:
+    - name: Download Python package
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package
+        path: dist
+
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        verbose: true
+
   release:
     runs-on: ubuntu-latest
-    needs: [build-deb, build-python]
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-deb, build-rpm, build-python]
     permissions:
       contents: write
 
@@ -117,6 +184,7 @@ jobs:
       with:
         files: |
           artifacts/debian-package/*.deb
+          artifacts/rpm-package/*.rpm
           artifacts/python-package/*
         generate_release_notes: true
       env:
@@ -125,7 +193,6 @@ jobs:
   update-apt-repo:
     runs-on: ubuntu-latest
     needs: build-deb
-    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     permissions:
       contents: write
 
@@ -226,5 +293,114 @@ jobs:
         git config user.email "actions@github.com"
         git add -A
         git diff --staged --quiet && echo "No changes to commit" && exit 0
-        git commit -m "Update APT repository"
+        git commit -m "Update APT repository for ${{ github.ref_name }}"
         git push origin apt-repo 2>/dev/null || git push --set-upstream origin apt-repo
+
+  update-yum-repo:
+    runs-on: ubuntu-latest
+    needs: build-rpm
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout main branch first
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup yum-repo branch
+      run: |
+        # Check if yum-repo branch exists remotely
+        if git ls-remote --exit-code --heads origin yum-repo >/dev/null 2>&1; then
+          echo "yum-repo branch exists, checking out..."
+          git checkout yum-repo
+        else
+          echo "Creating new yum-repo branch..."
+          git checkout --orphan yum-repo
+          git rm -rf . 2>/dev/null || true
+          mkdir -p packages
+        fi
+
+    - name: Download RPM package
+      uses: actions/download-artifact@v4
+      with:
+        name: rpm-package
+        path: packages
+
+    - name: Verify downloaded package
+      run: |
+        if [ ! -f packages/*.rpm ]; then
+          echo "ERROR: No .rpm files found in packages/"
+          ls -la packages/ || true
+          exit 1
+        fi
+        echo "Found packages:"
+        ls -la packages/
+
+    - name: Install createrepo
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y createrepo-c
+
+    - name: Generate YUM repository metadata
+      run: |
+        createrepo_c packages/
+
+    - name: Create repository README
+      run: |
+        cat > README.md << 'READMEEOF'
+        # FluxProbe YUM Repository
+
+        This branch contains the YUM/DNF repository for installing FluxProbe on RHEL/CentOS/Fedora systems.
+
+        ## Quick Installation
+
+        curl -fsSL https://raw.githubusercontent.com/kanchankjha/fluxprobe/yum-repo/install.sh | sudo bash
+
+        ## Manual Setup
+
+        sudo tee /etc/yum.repos.d/fluxprobe.repo << EOF
+        [fluxprobe]
+        name=FluxProbe Repository
+        baseurl=https://kanchankjha.github.io/fluxprobe/packages
+        enabled=1
+        gpgcheck=0
+        EOF
+
+        sudo dnf install fluxprobe
+        # or on older systems: sudo yum install fluxprobe
+        READMEEOF
+
+    - name: Create installation script
+      run: |
+        cat > install.sh << 'INSTALLEOF'
+        #!/bin/bash
+        set -e
+        echo "Setting up FluxProbe YUM repository..."
+        sudo tee /etc/yum.repos.d/fluxprobe.repo << EOF
+        [fluxprobe]
+        name=FluxProbe Repository
+        baseurl=https://kanchankjha.github.io/fluxprobe/packages
+        enabled=1
+        gpgcheck=0
+        EOF
+
+        # Use dnf if available, otherwise yum
+        if command -v dnf &> /dev/null; then
+            sudo dnf install -y fluxprobe
+        else
+            sudo yum install -y fluxprobe
+        fi
+        echo "FluxProbe installed successfully!"
+        echo "Run 'fluxprobe --help' to get started."
+        INSTALLEOF
+        chmod +x install.sh
+
+    - name: Commit and push
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        git add -A
+        git diff --staged --quiet && echo "No changes to commit" && exit 0
+        git commit -m "Update YUM repository for ${{ github.ref_name }}"
+        git push origin yum-repo 2>/dev/null || git push --set-upstream origin yum-repo
