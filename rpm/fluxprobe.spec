@@ -8,15 +8,9 @@ URL:            https://github.com/kanchankjha/fluxprobe
 Source0:        %{name}-%{version}.tar.gz
 
 BuildArch:      noarch
-BuildRequires:  python3-devel
-BuildRequires:  python3-setuptools
-BuildRequires:  python3-pip
-BuildRequires:  python3-wheel
 
 Requires:       python3
 Requires:       python3-pyyaml >= 6.0
-
-%define python3_sitelib %(python3 -c "import sysconfig; print(sysconfig.get_paths()['purelib'])")
 
 %description
 FluxProbe is a lightweight, schema-driven protocol fuzzer that generates
@@ -34,16 +28,26 @@ Features include:
 %autosetup -n %{name}-%{version}
 
 %build
-python3 setup.py build
+# Nothing to build
 
 %install
-python3 setup.py install --root=%{buildroot} --prefix=/usr --optimize=1
+# Install using pip to a target directory, then reorganize
+pip3 install --no-deps --target=%{buildroot}/usr/lib/python3/dist-packages .
+# Create bin directory and wrapper script
+mkdir -p %{buildroot}/usr/bin
+cat > %{buildroot}/usr/bin/fluxprobe << 'EOF'
+#!/usr/bin/env python3
+from fluxprobe.cli import main
+if __name__ == "__main__":
+    main()
+EOF
+chmod +x %{buildroot}/usr/bin/fluxprobe
 
 %files
 %license LICENSE
 %doc README.md
-%{python3_sitelib}/%{name}/
-%{python3_sitelib}/%{name}-*.egg-info/
+/usr/lib/python3/dist-packages/%{name}/
+/usr/lib/python3/dist-packages/%{name}-*.dist-info/
 /usr/bin/fluxprobe
 
 %changelog

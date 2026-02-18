@@ -81,7 +81,7 @@ jobs:
     - name: Install RPM build dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y rpm rpmlint python3-dev python3-setuptools python3-pip
+        sudo apt-get install -y rpm rpmlint python3-dev python3-setuptools python3-pip python3-wheel python3-build
 
     - name: Setup RPM build environment
       run: |
@@ -110,12 +110,12 @@ jobs:
 
     - name: Build RPM package
       run: |
-        rpmbuild -bb --nodeps ~/rpmbuild/SPECS/fluxprobe.spec
+        rpmbuild -bb --nodeps --define "_build_id_links none" ~/rpmbuild/SPECS/fluxprobe.spec
 
     - name: Collect RPM packages
       run: |
         mkdir -p dist
-        cp ~/rpmbuild/RPMS/noarch/fluxprobe-*.rpm dist/ 2>/dev/null || true
+        find ~/rpmbuild/RPMS -name "*.rpm" -exec cp {} dist/ \;
         echo "Package built successfully:"
         ls -la dist/
 
