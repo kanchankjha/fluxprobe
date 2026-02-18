@@ -99,7 +99,7 @@ jobs:
         VERSION=${{ steps.version.outputs.version }}
         TARBALL_DIR="fluxprobe-$VERSION"
         mkdir -p "$TARBALL_DIR"
-        cp -r fluxprobe examples LICENSE README.md pyproject.toml requirements.txt "$TARBALL_DIR/"
+        cp -r fluxprobe examples LICENSE README.md pyproject.toml setup.py requirements.txt "$TARBALL_DIR/"
         tar czf ~/rpmbuild/SOURCES/fluxprobe-$VERSION.tar.gz "$TARBALL_DIR"
         rm -rf "$TARBALL_DIR"
 
@@ -110,7 +110,7 @@ jobs:
 
     - name: Build RPM package
       run: |
-        rpmbuild -bb ~/rpmbuild/SPECS/fluxprobe.spec
+        rpmbuild -bb --nodeps ~/rpmbuild/SPECS/fluxprobe.spec
 
     - name: Collect RPM packages
       run: |

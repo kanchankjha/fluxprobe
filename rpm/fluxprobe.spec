@@ -45,7 +45,7 @@ Features include:
 %{_bindir}/fluxprobe
 
 %changelog
-* Wed Feb 12 2026 Kanchan Kumar Jha <kanchankjha@gmail.com> - 0.1.0-1
+* Thu Feb 12 2026 Kanchan Kumar Jha <kanchankjha@gmail.com> - 0.1.0-1
 - Initial RPM release
 - Schema-driven protocol fuzzing with YAML/JSON support
 - Built-in profiles: echo, http, dns, mqtt, modbus, coap, tcp, udp, ip, snmp, ssh
