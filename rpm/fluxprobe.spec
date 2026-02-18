@@ -1,5 +1,5 @@
 Name:           fluxprobe
-Version:        0.1.0
+Version:        1.0.0
 Release:        1%{?dist}
 Summary:        Schema-driven protocol fuzzer
 
@@ -59,8 +59,8 @@ find %{buildroot} -type f | sort
 /usr/bin/fluxprobe
 
 %changelog
-* Thu Feb 12 2026 Kanchan Kumar Jha <kanchankjha@gmail.com> - 0.1.0-1
-- Initial RPM release
+* Tue Feb 18 2026 Kanchan Kumar Jha <kanchankjha@gmail.com> - 1.0.0-1
+- Release 1.0.0
 - Schema-driven protocol fuzzing with YAML/JSON support
 - Built-in profiles: echo, http, dns, mqtt, modbus, coap, tcp, udp, ip, snmp, ssh
 - TCP and UDP transport support
