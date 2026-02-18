@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 authors = [{ name = "Kanchan Kumar Jha", email = "kanchankjha@gmail.com" }]
 dependencies = ["PyYAML>=6.0"]
-license = "MIT"
+license = { text = "MIT" }
 keywords = ["fuzzing", "protocol", "testing", "security", "network"]
 classifiers = [
     "Development Status :: 4 - Beta",
